@@ -22,7 +22,7 @@ fun main() {
             // evaluateExpression 함수를 호출하여 입력된 식의 결과를 계산
             val result = evaluateExpression(input, calculator)
             // 계산 결과를 사용자에게 출력
-            println("결과: $result")
+            println("$input = $result")
         } catch (e: Exception) {
             // 계산 중에 오류가 발생한 경우 오류 메시지를 사용자에게 출력
             println("오류: ${e.message}")
