@@ -1,84 +1,72 @@
-import com.first.calcultermi.*
-import java.util.Scanner
+package com.first.calcultermi
+
+import java.util.*
 
 fun main() {
-    val scanner = Scanner(System.`in`)
-    val calculator = Calculator()
-    println("----------------------계산기 입 니 다 . 종료 하 려 면 q 입력해요----------------------")
+    val calculator = Calculator() // Calculator 클래스의 인스턴스 생성
+    val scanner = Scanner(System.`in`) // 사용자 입력을 받기 위한 Scanner 생성
 
     while (true) {
-        println("수식을 입력하십시오 ex) 1+2*3")
+        println("계산식을 입력하세요 (예: 1+2*3) 또는 'exit'을 입력하여 종료: ")
         val input = scanner.nextLine()
 
-        try {
-            // q입력시 종료
-            if (input == "q") {
-                println("계산기를 종료합니다")
-                break
-            }
+        // 'exit'을 입력한 경우 프로그램 종료
+        if (input.equals("exit", ignoreCase = true)) {
+            println("안녕히 가세요!")
+            break
+        }
 
-            val result = evaluateExpression(input)
-            println("입력한 식 : $input")
+        try {
+            // 입력된 식 출력
+            println("입력된 식: $input")
+            // evaluateExpression 함수를 호출하여 입력된 식의 결과를 계산
+            val result = evaluateExpression(input, calculator)
+            // 계산 결과를 사용자에게 출력
             println("결과: $result")
         } catch (e: Exception) {
-            println("잘못된 입력 또는 연산 오류가 발생했습니다.")
+            // 계산 중에 오류가 발생한 경우 오류 메시지를 사용자에게 출력
+            println("오류: ${e.message}")
         }
     }
+
+
 }
 
-fun evaluateExpression(expression: String): Int {  // evaluateExpression 메소드는 expression이라는 String형으로 선언 정수 값을 반환
-    val tokens = mutableListOf<String>()  //mutableListOf는 입력을 변환 가능한 리스트로 함
-    var currentNumber: String= ""
+fun evaluateExpression(input: String, calculator: Calculator): Int {
+    // 입력된 계산식을 토큰화
+    val tokens = input.split("\\s*(?<=[+\\-*/])|(?=[+\\-*/])\\s*".toRegex())
 
-    for (char in expression) {// 입력 식에서 각 문자를 반복
-        if (char.isDigit()) { // 문자가 숫자인경우
-            currentNumber += char //번호에 문자열을 추가
-        } else {
-            if (currentNumber.isNotEmpty()) { //문자열이 비어있지 않은경우
-                tokens.add(currentNumber) //리스트 목록에 추가
-                currentNumber = ""
-            }
-            tokens.add(char.toString())
+    // 숫자와 연산자를 분리하여 저장할 리스트들 생성
+    val numbers = mutableListOf<Int>()
+    val operators = mutableListOf<Operand>()
+
+    for (token in tokens) {
+        when {
+            // 숫자인 경우 숫자 리스트에 추가
+            token.matches(Regex("-?\\d+")) -> numbers.add(token.toInt())
+            // '+'인 경우 AdditionOperand 인스턴스 생성 후 연산자 리스트에 추가
+            token == "+" -> operators.add(AdditionOperand())
+            // '-'인 경우 SubtractionOperand 인스턴스 생성 후 연산자 리스트에 추가
+            token == "-" -> operators.add(SubtractionOperand())
+            // '*'인 경우 MultiplicationOperand 인스턴스 생성 후 연산자 리스트에 추가
+            token == "*" -> operators.add(MultiplicationOperand())
+            // '/'인 경우 DivisionOperand 인스턴스 생성 후 연산자 리스트에 추가
+            token == "/" -> operators.add(DivisionOperand())
+            else -> throw IllegalArgumentException("잘못된 토큰: $token")
         }
     }
 
-
-    val addSubResult = mutableListOf<String>()  //덧셈과 뺄셈일 경우 먼저 수행하는 로직 가변리스트로 중간 값을 저장하게함
-    var i = 0  //토큰의 값을 0으로 초기화함
-    while (i < tokens.size) {
-        val token = tokens[i] //i에서 현재 토큰에 입력된 값을 가져옴
-        if (token == "+" || token == "-") {  //+, - 인지 확인한다.
-            val left = addSubResult.removeAt(addSubResult.size - 1).toInt() //addSubResult의 마지막 요소를 정수로 변환
-            val right = tokens[i + 1].toInt() // 리스트에 입력된 다음 요소를 가져와서 정수로 변환함
-            val result = if (token == "+") left + right else left - right   // + 연산자 이면 left + right를 실행
-            addSubResult.add(result.toString())  // 실행한 값을 결과에 문자열로 저장함
-            i += 2   // 'i' 인덱스를 2만큼 증가시켜 다음 숫자와 방금 처리된 연산자를 건너뛰게함
-        } else {  //연산자가 없으면 그냥 추가하고 다음 연산을 처리
-            addSubResult.add(token)
-            i++
-        }
+    // 연산자보다 숫자가 하나 더 많아야 유효한 식이므로 확인
+    if (numbers.size != operators.size + 1) {
+        throw IllegalArgumentException("잘못된 식입니다")
     }
 
-
-    var finalResult = addSubResult[0].toInt()
-    i = 1
-    while (i < addSubResult.size) {
-        val token = addSubResult[i]
-        if (token == "*" || token == "/") {
-            try {
-                val right = addSubResult[i + 1].toInt()
-                finalResult = if (token == "*") finalResult * right else finalResult / right
-                i += 2
-            } catch (e: Exception) {
-                println("잘못된 연산자")
-                return finalResult
-            }
-        } else {
-            println("잘못된 연산자")
-            return finalResult
-        }
+    // Calculator를 사용하여 식을 한 단계씩 계산하여 결과 계산
+    var result = numbers[0]
+    for (i in operators.indices) {
+        result = calculator.calculate(result, numbers[i + 1], operators[i])
     }
 
-    return finalResult
-
+    // 최종 결과 반환
+    return result
 }
